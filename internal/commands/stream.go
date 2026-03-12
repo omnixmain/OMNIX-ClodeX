@@ -79,7 +79,17 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	)
 	hash := utils.GetShortHash(fullHash)
 	link := fmt.Sprintf("%s/stream/%d?hash=%s", config.ValueOf.Host, messageID, hash)
-	text := []styling.StyledTextOption{styling.Code(link)}
+	text := []styling.StyledTextOption{
+		styling.Plain("📄 File Information\n\n"),
+		styling.Plain("📁 File Name:\n"),
+		styling.Code(file.FileName),
+		styling.Plain("\n\n🔗 Streaming & Download URL:\n"),
+		styling.Code(link),
+		styling.Plain("\n\n📢 Telegram Join URL:\n"),
+		styling.Plain("https://t.me/omnix_Empire\n\n"),
+		styling.Plain("⚡ Powered by: "), styling.Bold("OMNIX Empire"),
+		styling.Plain("\n\n✨ Have a Good Day!"),
+	}
 	row := tg.KeyboardButtonRow{
 		Buttons: []tg.KeyboardButtonClass{
 			&tg.KeyboardButtonURL{
