@@ -79,10 +79,18 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	)
 	hash := utils.GetShortHash(fullHash)
 	link := fmt.Sprintf("%s/stream/%d?hash=%s", config.ValueOf.Host, messageID, hash)
+
+	beautifiedName, quality := utils.BeautifyFileName(file.FileName)
+	readableSize := utils.HumanReadableSize(file.FileSize)
+
 	text := []styling.StyledTextOption{
 		styling.Plain("📄 File Information\n\n"),
-		styling.Plain("📁 File Name:\n"),
-		styling.Code(file.FileName),
+		styling.Plain("📁 File Name: "),
+		styling.Bold(beautifiedName),
+		styling.Plain("\n💿 Quality: "),
+		styling.Code(quality),
+		styling.Plain("\n⚖️ File Size: "),
+		styling.Code(readableSize),
 		styling.Plain("\n\n🔗 Streaming & Download URL:\n"),
 		styling.Code(link),
 		styling.Plain("\n\n📢 Telegram Join URL:\n"),
