@@ -43,7 +43,7 @@ func supportedMediaFilter(m *types.Message) (bool, error) {
 func sendLink(ctx *ext.Context, u *ext.Update) error {
 	chatId := u.EffectiveChat().GetID()
 	peerChatId := ctx.PeerStorage.GetPeerById(chatId)
-	if peerChatId.Type != int(storage.TypeUser) {
+	if peerChatId.Type != int(storage.TypeUser) && peerChatId.Type != int(storage.TypeChat) && peerChatId.Type != int(storage.TypeChannel) {
 		return dispatcher.EndGroups
 	}
 	if len(config.ValueOf.AllowedUsers) != 0 && !utils.Contains(config.ValueOf.AllowedUsers, chatId) {
@@ -55,7 +55,9 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 		return err
 	}
 	if !supported {
-		ctx.Reply(u, "Sorry, this message type is unsupported.", nil)
+		if peerChatId.Type == int(storage.TypeUser) {
+			ctx.Reply(u, "Sorry, this message type is unsupported.", nil)
+		}
 		return dispatcher.EndGroups
 	}
 	update, err := utils.ForwardMessages(ctx, chatId, config.ValueOf.LogChannelID, u.EffectiveMessage.ID)
@@ -84,34 +86,27 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	readableSize := utils.HumanReadableSize(file.FileSize)
 
 	text := []styling.StyledTextOption{
-		styling.Plain("📄 File Information\n\n"),
-		styling.Plain("📁 File Name: "),
-		styling.Bold(beautifiedName),
-		styling.Plain("\n💿 Quality: "),
-		styling.Code(quality),
-		styling.Plain("\n⚖️ File Size: "),
-		styling.Code(readableSize),
-		styling.Plain("\n\n🔗 Streaming & Download URL:\n"),
-		styling.Code(link),
-		styling.Plain("\n\n📢 Telegram Join URL:\n"),
-		styling.Plain("https://t.me/omnix_Empire\n\n"),
-		styling.Plain("⚡ Powered by: "), styling.Bold("OMNIX Empire"),
-		styling.Plain("\n\n✨ Have a Good Day!"),
+		styling.Plain("📁 "), styling.Bold("File Name: "), styling.Plain(beautifiedName),
+		styling.Plain("\n💿 "), styling.Bold("Quality: "), styling.Code(quality),
+		styling.Plain("\n⚖️ "), styling.Bold("File Size: "), styling.Code(readableSize),
+		styling.Plain("\n\n📢 "), styling.Italic("Powered by OMNIX Empire"),
 	}
 	row := tg.KeyboardButtonRow{
-		Buttons: []tg.KeyboardButtonClass{
-			&tg.KeyboardButtonURL{
-				Text: "Download",
-				URL:  link + "&d=true",
-			},
-		},
+		Buttons: []tg.KeyboardButtonClass{},
 	}
+
 	if strings.Contains(file.MimeType, "video") || strings.Contains(file.MimeType, "audio") || strings.Contains(file.MimeType, "pdf") {
 		row.Buttons = append(row.Buttons, &tg.KeyboardButtonURL{
-			Text: "Stream",
+			Text: "Watch Now",
 			URL:  link,
 		})
 	}
+
+	row.Buttons = append(row.Buttons, &tg.KeyboardButtonURL{
+		Text: "Download",
+		URL:  link + "&d=true",
+	})
+
 	markup := &tg.ReplyInlineMarkup{
 		Rows: []tg.KeyboardButtonRow{row},
 	}
