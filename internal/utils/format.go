@@ -20,12 +20,12 @@ func HumanReadableSize(bytes int64) string {
 	return fmt.Sprintf("%.2f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-func BeautifyFileName(name string) (string, string) {
+func BeautifyFileName(name string) (string, string, string) {
 	// Remove extension
 	ext := filepath.Ext(name)
 	name = strings.TrimSuffix(name, ext)
 
-	// Quality extraction (e.g., 720p, 1080p, 4k)
+	// Quality extraction (e.g., 480p, 720p, 1080p, 2160p, 4k)
 	qualityRegex := regexp.MustCompile(`(?i)(480p|720p|1080p|2160p|4k)`)
 	quality := qualityRegex.FindString(name)
 	if quality != "" {
@@ -34,26 +34,28 @@ func BeautifyFileName(name string) (string, string) {
 		quality = "Unknown"
 	}
 
+	// Season and Episode extraction
+	seasonEpisodeRegex := regexp.MustCompile(`(?i)S(\d+)E(\d+)`)
+	seMatch := seasonEpisodeRegex.FindStringSubmatch(name)
+	seasonEpisode := ""
+	if len(seMatch) == 3 {
+		seasonEpisode = fmt.Sprintf("Season %s • Episode %s", seMatch[1], seMatch[2])
+	}
+
 	// Replace underscores and dots with spaces
 	name = strings.ReplaceAll(name, "_", " ")
 	name = strings.ReplaceAll(name, ".", " ")
 
-	// Remove quality from name if present to avoid duplication
+	// Remove quality and season/episode from name if present to avoid duplication
 	name = qualityRegex.ReplaceAllString(name, "")
+	name = seasonEpisodeRegex.ReplaceAllString(name, "")
 
 	// Clean up extra spaces
 	name = strings.Join(strings.Fields(name), " ")
 
-	// Add hyphens for common patterns (S01E01, etc.)
-	seasonRegex := regexp.MustCompile(`(?i)(S\d+E\d+)`)
-	name = seasonRegex.ReplaceAllStringFunc(name, func(s string) string {
-		return " - " + strings.ToUpper(s) + " - "
-	})
-
 	// Final trim and clean up
 	name = strings.TrimSpace(name)
-	name = strings.ReplaceAll(name, " - - ", " - ")
 	name = strings.Trim(name, "- ")
 
-	return name, quality
+	return name, quality, seasonEpisode
 }

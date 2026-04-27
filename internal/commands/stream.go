@@ -82,15 +82,25 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	hash := utils.GetShortHash(fullHash)
 	link := fmt.Sprintf("%s/stream/%d?hash=%s", config.ValueOf.Host, messageID, hash)
 
-	beautifiedName, quality := utils.BeautifyFileName(file.FileName)
+	beautifiedName, quality, seasonEpisode := utils.BeautifyFileName(file.FileName)
 	readableSize := utils.HumanReadableSize(file.FileSize)
 
 	text := []styling.StyledTextOption{
 		styling.Plain("📁 "), styling.Bold("File Name: "), styling.Plain(beautifiedName),
-		styling.Plain("\n💿 "), styling.Bold("Quality: "), styling.Code(quality),
-		styling.Plain("\n⚖️ "), styling.Bold("File Size: "), styling.Code(readableSize),
-		styling.Plain("\n\n📢 "), styling.Italic("Powered by OMNIX Empire"),
 	}
+
+	if seasonEpisode != "" {
+		text = append(text, styling.Plain("\n🎞️ "), styling.Bold(seasonEpisode))
+	}
+
+	text = append(text,
+		styling.Plain("\n💿 "), styling.Bold("Quality: "), styling.Code(quality),
+		styling.Plain("\n⚖️ "), styling.Bold("Size: "), styling.Code(readableSize),
+		styling.Plain("\n\n▶️ "), styling.Bold("Watch Now:"),
+		styling.Plain("\n🔗 "), styling.Code(link),
+		styling.Plain("\n\n⚡ "), styling.Bold("Powered by OMNIX Empire"),
+	)
+
 	row := tg.KeyboardButtonRow{
 		Buttons: []tg.KeyboardButtonClass{},
 	}
