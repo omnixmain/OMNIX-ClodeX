@@ -21,6 +21,11 @@ func (e *allRoutes) LoadHome(r *Route) {
 	log = e.log.Named("Stream")
 	defer log.Info("Loaded stream route")
 	r.Engine.GET("/stream/:messageID", getStreamRoute)
+	r.Engine.GET("/stream/:messageID/:filename", getStreamRoute)
+	r.Engine.GET("/download/:messageID", getStreamRoute)
+	r.Engine.GET("/download/:messageID/:filename", getStreamRoute)
+	r.Engine.GET("/view/:messageID", getStreamRoute)
+	r.Engine.GET("/view/:messageID/:filename", getStreamRoute)
 }
 
 func getStreamRoute(ctx *gin.Context) {
@@ -116,7 +121,7 @@ func getStreamRoute(ctx *gin.Context) {
 
 	disposition := "inline"
 
-	if ctx.Query("d") == "true" {
+	if ctx.Query("d") == "true" || strings.HasPrefix(r.URL.Path, "/download/") {
 		disposition = "attachment"
 	}
 

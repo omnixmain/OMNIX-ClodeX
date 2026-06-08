@@ -26,6 +26,6 @@ func start(ctx *ext.Context, u *ext.Update) error {
 		ctx.Reply(u, "You are not allowed to use this bot.", nil)
 		return dispatcher.EndGroups
 	}
-	ctx.Reply(u, "👋 Welcome User!\n\n📤 Send your file to get a\n🔗 Direct Streamable / Download Link from OMNIX Cloud.\n\n🔔 Join our Back-Up Group:\nhttps://t.me/omnixempire", nil)
+	ctx.Reply(u, "👋 Welcome User!\n\n📤 Send your file to get a\n🔗 Direct Streamable / Download Link from OMNIX ClodeX.\n\n🔔 Join our Back-Up Group:\nhttps://t.me/omnixclodex", nil)
 	return dispatcher.EndGroups
 }

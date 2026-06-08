@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"EverythingSuckz/fsb/config"
@@ -80,7 +81,33 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 		file.ID,
 	)
 	hash := utils.GetShortHash(fullHash)
-	link := fmt.Sprintf("%s/stream/%d?hash=%s", config.ValueOf.Host, messageID, hash)
+
+	fileNamePath := ""
+	if file.FileName != "" {
+		fileNamePath = "/" + url.PathEscape(file.FileName)
+	}
+
+	var linkType, actionText, actionEmoji string
+	if strings.HasPrefix(file.MimeType, "video") {
+		linkType = "stream"
+		actionText = "Watch Now"
+		actionEmoji = "▶️"
+	} else if strings.HasPrefix(file.MimeType, "image") {
+		linkType = "view"
+		actionText = "View Now"
+		actionEmoji = "🖼️"
+	} else if strings.HasPrefix(file.MimeType, "audio") {
+		linkType = "stream"
+		actionText = "Listen Now"
+		actionEmoji = "🎧"
+	} else {
+		linkType = "download"
+		actionText = "Download Now"
+		actionEmoji = "⬇️"
+	}
+
+	link := fmt.Sprintf("%s/%s/%d%s?hash=%s", config.ValueOf.Host, linkType, messageID, fileNamePath, hash)
+	dlLink := fmt.Sprintf("%s/download/%d%s?hash=%s", config.ValueOf.Host, messageID, fileNamePath, hash)
 
 	beautifiedName, quality, seasonEpisode := utils.BeautifyFileName(file.FileName)
 	readableSize := utils.HumanReadableSize(file.FileSize)
@@ -96,25 +123,25 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	text = append(text,
 		styling.Plain("\n💿 "), styling.Bold("Quality: "), styling.Code(quality),
 		styling.Plain("\n⚖️ "), styling.Bold("Size: "), styling.Code(readableSize),
-		styling.Plain("\n\n▶️ "), styling.Bold("Watch Now:"),
+		styling.Plain(fmt.Sprintf("\n\n%s ", actionEmoji)), styling.Bold(fmt.Sprintf("%s:", actionText)),
 		styling.Plain("\n🔗 "), styling.Code(link),
-		styling.Plain("\n\n⚡ "), styling.Bold("Powered by OMNIX Empire"),
+		styling.Plain("\n\n⚡ "), styling.Bold("Powered by OMNIX ClodeX"),
 	)
 
 	row := tg.KeyboardButtonRow{
 		Buttons: []tg.KeyboardButtonClass{},
 	}
 
-	if strings.Contains(file.MimeType, "video") || strings.Contains(file.MimeType, "audio") || strings.Contains(file.MimeType, "pdf") {
+	if linkType == "stream" || linkType == "view" {
 		row.Buttons = append(row.Buttons, &tg.KeyboardButtonURL{
-			Text: "Watch Now",
+			Text: actionText,
 			URL:  link,
 		})
 	}
 
 	row.Buttons = append(row.Buttons, &tg.KeyboardButtonURL{
 		Text: "Download",
-		URL:  link + "&d=true",
+		URL:  dlLink,
 	})
 
 	markup := &tg.ReplyInlineMarkup{

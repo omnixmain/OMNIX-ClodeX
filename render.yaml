@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: tg-filestreambot
+    name: omnixclodex
     env: docker
     plan: free
     region: singapore
