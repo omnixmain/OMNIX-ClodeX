@@ -82,9 +82,9 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 	)
 	hash := utils.GetShortHash(fullHash)
 
-	fileNamePath := ""
+	safeName := "file"
 	if file.FileName != "" {
-		fileNamePath = "/" + url.PathEscape(file.FileName)
+		safeName = url.PathEscape(file.FileName)
 	}
 
 	var linkType, actionText, actionEmoji string
@@ -106,8 +106,8 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 		actionEmoji = "⬇️"
 	}
 
-	link := fmt.Sprintf("%s/%s/%d%s?hash=%s", config.ValueOf.Host, linkType, messageID, fileNamePath, hash)
-	dlLink := fmt.Sprintf("%s/download/%d%s?hash=%s", config.ValueOf.Host, messageID, fileNamePath, hash)
+	link := fmt.Sprintf("%s/%s/%d/%s/%s", config.ValueOf.Host, linkType, messageID, hash, safeName)
+	dlLink := fmt.Sprintf("%s/download/%d/%s/%s", config.ValueOf.Host, messageID, hash, safeName)
 
 	beautifiedName, quality, seasonEpisode := utils.BeautifyFileName(file.FileName)
 	readableSize := utils.HumanReadableSize(file.FileSize)

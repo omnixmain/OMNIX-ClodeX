@@ -23,10 +23,13 @@ func (e *allRoutes) LoadHome(r *Route) {
 	defer log.Info("Loaded stream route")
 	r.Engine.GET("/stream/:messageID", getStreamRoute)
 	r.Engine.GET("/stream/:messageID/:filename", getStreamRoute)
+	r.Engine.GET("/stream/:messageID/:hash/:filename", getStreamRoute)
 	r.Engine.GET("/download/:messageID", getStreamRoute)
 	r.Engine.GET("/download/:messageID/:filename", getStreamRoute)
+	r.Engine.GET("/download/:messageID/:hash/:filename", getStreamRoute)
 	r.Engine.GET("/view/:messageID", getStreamRoute)
 	r.Engine.GET("/view/:messageID/:filename", getStreamRoute)
+	r.Engine.GET("/view/:messageID/:hash/:filename", getStreamRoute)
 }
 
 func getStreamRoute(ctx *gin.Context) {
@@ -40,7 +43,10 @@ func getStreamRoute(ctx *gin.Context) {
 		return
 	}
 
-	authHash := ctx.Query("hash")
+	authHash := ctx.Param("hash")
+	if authHash == "" {
+		authHash = ctx.Query("hash")
+	}
 	if authHash == "" {
 		http.Error(w, "missing hash param", http.StatusBadRequest)
 		return
