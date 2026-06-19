@@ -178,13 +178,15 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 			albumLinks[groupKey] = make(map[string]string)
 			isFirst = true
 		}
-		parsedUrl, _ := url.Parse(link)
+		
+		// Use short path (without filename) to keep master URL clean
+		shortPath := fmt.Sprintf("/%s/%d/%s", linkType, messageID, hash)
 		
 		q := strings.ToLower(quality)
 		if q == "unknown" {
 			q = fmt.Sprintf("unknown_%d", len(albumLinks[groupKey]))
 		}
-		albumLinks[groupKey][q] = parsedUrl.Path
+		albumLinks[groupKey][q] = shortPath
 		albumMu.Unlock()
 
 		if isFirst {
