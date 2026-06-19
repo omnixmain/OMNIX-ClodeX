@@ -179,8 +179,12 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 			isFirst = true
 		}
 		
-		// Use short path (with a generic video extension) to keep master URL clean and player-compatible
-		shortPath := fmt.Sprintf("/%s/%d/%s/video.mp4", linkType, messageID, hash)
+		safeName := "video.mp4"
+		if file.FileName != "" {
+			safeName = url.PathEscape(file.FileName)
+		}
+		// Use short path (with real filename) to keep master URL clean and player-compatible
+		shortPath := fmt.Sprintf("/%s/%d/%s/%s", linkType, messageID, hash, safeName)
 		
 		q := strings.ToLower(quality)
 		if q == "unknown" {
