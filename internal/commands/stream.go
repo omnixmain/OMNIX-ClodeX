@@ -45,7 +45,7 @@ func supportedMediaFilter(m *types.Message) (bool, error) {
 }
 
 var albumMu sync.Mutex
-var albumLinks = make(map[int64]map[string]string)
+var albumLinks = make(map[string]map[string]string)
 
 func sendLink(ctx *ext.Context, u *ext.Update) error {
 	chatId := u.EffectiveChat().GetID()
@@ -170,25 +170,30 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 		ctx.Reply(u, fmt.Sprintf("Error - %s", err.Error()), nil)
 	}
 
-	groupedID := u.EffectiveMessage.GroupedID
-	if groupedID != 0 && linkType == "stream" {
+	groupKey := fmt.Sprintf("%d_%s", chatId, beautifiedName)
+	if linkType == "stream" {
 		albumMu.Lock()
 		isFirst := false
-		if _, ok := albumLinks[groupedID]; !ok {
-			albumLinks[groupedID] = make(map[string]string)
+		if _, ok := albumLinks[groupKey]; !ok {
+			albumLinks[groupKey] = make(map[string]string)
 			isFirst = true
 		}
 		parsedUrl, _ := url.Parse(link)
-		albumLinks[groupedID][strings.ToLower(quality)] = parsedUrl.Path
+		
+		q := strings.ToLower(quality)
+		if q == "unknown" {
+			q = fmt.Sprintf("unknown_%d", len(albumLinks[groupKey]))
+		}
+		albumLinks[groupKey][q] = parsedUrl.Path
 		albumMu.Unlock()
 
 		if isFirst {
-			go func(gid int64, context *ext.Context, update *ext.Update) {
-				// Wait for all parts of the album to arrive (10 seconds should be plenty)
-				time.Sleep(10 * time.Second)
+			go func(gKey string, context *ext.Context, update *ext.Update) {
+				// Wait for all parts to arrive (10 seconds should be plenty)
+				time.Sleep(15 * time.Second)
 				albumMu.Lock()
-				links := albumLinks[gid]
-				delete(albumLinks, gid)
+				links := albumLinks[gKey]
+				delete(albumLinks, gKey)
 				albumMu.Unlock()
 
 				if len(links) > 1 {
@@ -224,7 +229,7 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 						NoWebpage:        true,
 					})
 				}
-			}(groupedID, ctx, u)
+			}(groupKey, ctx, u)
 		}
 	}
 
