@@ -177,7 +177,7 @@ func masterPlaylistRoute(ctx *gin.Context) {
 	}
 
 	ctx.Header("Content-Type", "application/vnd.apple.mpegurl")
-	ctx.Header("Content-Disposition", "attachment; filename=\"master.m3u8\"")
+	ctx.Header("Content-Disposition", "inline; filename=\"master.m3u8\"")
 	ctx.String(http.StatusOK, m3u8.String())
 }
 
