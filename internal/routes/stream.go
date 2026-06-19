@@ -175,7 +175,18 @@ func masterPlaylistRoute(ctx *gin.Context) {
 
 		decodedPathBytes, err := base64.RawURLEncoding.DecodeString(values[0])
 		if err == nil {
-			m3u8.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:%s\n%s\n", streamInfo, string(decodedPathBytes)))
+			path := string(decodedPathBytes)
+			// Ensure spaces are properly URL-encoded for M3U8
+			escapedPath := strings.ReplaceAll(path, " ", "%20")
+			
+			// Use absolute URL by reconstructing from the request
+			scheme := "http"
+			if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+				scheme = "https"
+			}
+			absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
+			
+			m3u8.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:%s\n%s\n", streamInfo, absoluteURL))
 		}
 	}
 
