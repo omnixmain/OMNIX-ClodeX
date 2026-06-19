@@ -216,7 +216,11 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 						masterText = append(masterText, styling.Bold(displayQ), styling.Plain(" - "), styling.Code(fullLink), styling.Plain("\n"))
 					}
 					
-					masterLink := fmt.Sprintf("%s/master.m3u8?%s", config.ValueOf.Host, strings.Join(qs, "&"))
+					safeTitle := url.PathEscape(beautifiedName)
+					if safeTitle == "" {
+						safeTitle = "playlist"
+					}
+					masterLink := fmt.Sprintf("%s/master/%s.m3u8?%s", config.ValueOf.Host, safeTitle, strings.Join(qs, "&"))
 					
 					masterText = append(masterText, 
 						styling.Plain("\n🎬 "), styling.Bold("Master URL"), styling.Plain(" - "), styling.Code(masterLink),

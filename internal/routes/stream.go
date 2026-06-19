@@ -32,6 +32,7 @@ func (e *allRoutes) LoadHome(r *Route) {
 	r.Engine.GET("/view/:messageID/:hash", getStreamRoute)
 	r.Engine.GET("/view/:messageID/:hash/:filename", getStreamRoute)
 	r.Engine.GET("/master.m3u8", masterPlaylistRoute)
+	r.Engine.GET("/master/:filename", masterPlaylistRoute)
 }
 
 func getStreamRoute(ctx *gin.Context) {
@@ -176,8 +177,13 @@ func masterPlaylistRoute(ctx *gin.Context) {
 		}
 	}
 
+	filename := ctx.Param("filename")
+	if filename == "" {
+		filename = "master.m3u8"
+	}
+
 	ctx.Header("Content-Type", "application/vnd.apple.mpegurl")
-	ctx.Header("Content-Disposition", "inline; filename=\"master.m3u8\"")
+	ctx.Header("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", filename))
 	ctx.String(http.StatusOK, m3u8.String())
 }
 
