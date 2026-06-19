@@ -197,18 +197,29 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 				albumMu.Unlock()
 
 				if len(links) > 1 {
+					var masterText []styling.StyledTextOption
+					masterText = append(masterText, styling.Plain("✅ "), styling.Bold("Auto-Generated Master M3U8 Playlist!\n\n"))
+
 					var qs []string
 					for q, l := range links {
 						b64Path := base64.RawURLEncoding.EncodeToString([]byte(l))
 						qs = append(qs, fmt.Sprintf("%s=%s", q, b64Path))
+						
+						displayQ := strings.ToUpper(q)
+						if strings.HasPrefix(displayQ, "UNKNOWN_") {
+							displayQ = "PART " + strings.TrimPrefix(displayQ, "UNKNOWN_")
+						}
+						
+						fullLink := fmt.Sprintf("%s%s", config.ValueOf.Host, l)
+						masterText = append(masterText, styling.Bold(displayQ), styling.Plain(" - "), styling.Code(fullLink), styling.Plain("\n"))
 					}
+					
 					masterLink := fmt.Sprintf("%s/master.m3u8?%s", config.ValueOf.Host, strings.Join(qs, "&"))
 					
-					masterText := []styling.StyledTextOption{
-						styling.Plain("✅ "), styling.Bold("Auto-Generated Master M3U8 Playlist!"),
-						styling.Plain("\n\nThis single link combines all "), styling.Bold(fmt.Sprintf("%d", len(links))), styling.Plain(" qualities of your upload for adaptive streaming.\n\n🔗 "), styling.Code(masterLink),
+					masterText = append(masterText, 
+						styling.Plain("\n🎬 "), styling.Bold("Master URL"), styling.Plain(" - "), styling.Code(masterLink),
 						styling.Plain("\n\n⚡ "), styling.Bold("Powered by OMNIX ClodeX"),
-					}
+					)
 					
 					masterMarkup := &tg.ReplyInlineMarkup{
 						Rows: []tg.KeyboardButtonRow{
