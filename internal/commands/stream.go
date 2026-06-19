@@ -202,10 +202,9 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 					var masterText []styling.StyledTextOption
 					masterText = append(masterText, styling.Plain("✅ "), styling.Bold("Auto-Generated Master M3U8 Playlist!\n\n"))
 
-					var qs []string
+					var parts []string
 					for q, l := range links {
-						b64Path := base64.RawURLEncoding.EncodeToString([]byte(l))
-						qs = append(qs, fmt.Sprintf("%s=%s", q, b64Path))
+						parts = append(parts, fmt.Sprintf("%s:%s", q, l))
 						
 						displayQ := strings.ToUpper(q)
 						if strings.HasPrefix(displayQ, "UNKNOWN_") {
@@ -216,11 +215,14 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 						masterText = append(masterText, styling.Bold(displayQ), styling.Plain(" - "), styling.Code(fullLink), styling.Plain("\n"))
 					}
 					
+					joinedData := strings.Join(parts, "|")
+					b64Data := base64.RawURLEncoding.EncodeToString([]byte(joinedData))
+					
 					safeTitle := url.PathEscape(beautifiedName)
 					if safeTitle == "" {
 						safeTitle = "playlist"
 					}
-					masterLink := fmt.Sprintf("%s/master/%s.m3u8?%s", config.ValueOf.Host, safeTitle, strings.Join(qs, "&"))
+					masterLink := fmt.Sprintf("%s/master/%s/%s.m3u8", config.ValueOf.Host, safeTitle, b64Data)
 					
 					masterText = append(masterText, 
 						styling.Plain("\n🎬 "), styling.Bold("Master URL"), styling.Plain(" - "), styling.Code(masterLink),

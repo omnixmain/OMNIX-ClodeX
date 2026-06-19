@@ -33,6 +33,7 @@ func (e *allRoutes) LoadHome(r *Route) {
 	r.Engine.GET("/view/:messageID/:hash/:filename", getStreamRoute)
 	r.Engine.GET("/master.m3u8", masterPlaylistRoute)
 	r.Engine.GET("/master/:filename", masterPlaylistRoute)
+	r.Engine.GET("/master/:filename/:data", masterPlaylistRoute)
 }
 
 func getStreamRoute(ctx *gin.Context) {
@@ -155,25 +156,41 @@ func masterPlaylistRoute(ctx *gin.Context) {
 	var m3u8 strings.Builder
 	m3u8.WriteString("#EXTM3U\n")
 
-	for key, values := range query {
-		if len(values) == 0 {
-			continue
-		}
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
 
-		decodedPathBytes, err := base64.RawURLEncoding.DecodeString(values[0])
+	dataParam := ctx.Param("data")
+	if dataParam != "" {
+		dataParam = strings.TrimSuffix(dataParam, ".m3u8")
+		decoded, err := base64.RawURLEncoding.DecodeString(dataParam)
 		if err == nil {
-			path := string(decodedPathBytes)
-			// Ensure spaces are properly URL-encoded for M3U8
-			escapedPath := strings.ReplaceAll(path, " ", "%20")
-			
-			// Use absolute URL by reconstructing from the request
-			scheme := "http"
-			if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
-				scheme = "https"
+			parts := strings.Split(string(decoded), "|")
+			for _, part := range parts {
+				kv := strings.SplitN(part, ":", 2)
+				if len(kv) == 2 {
+					quality := kv[0]
+					path := kv[1]
+					escapedPath := strings.ReplaceAll(path, " ", "%20")
+					absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
+					m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(quality), absoluteURL))
+				}
 			}
-			absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
-			
-			m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(key), absoluteURL))
+		}
+	} else {
+		for key, values := range query {
+			if len(values) == 0 {
+				continue
+			}
+
+			decodedPathBytes, err := base64.RawURLEncoding.DecodeString(values[0])
+			if err == nil {
+				path := string(decodedPathBytes)
+				escapedPath := strings.ReplaceAll(path, " ", "%20")
+				absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
+				m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(key), absoluteURL))
+			}
 		}
 	}
 
