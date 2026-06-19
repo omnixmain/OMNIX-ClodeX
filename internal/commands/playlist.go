@@ -34,7 +34,7 @@ func createMasterPlaylist(ctx *ext.Context, u *ext.Update) error {
 	}
 
 	// Command syntax: /m3u8 1080p:link1 720p:link2 480p:link3
-	text := u.EffectiveMessage.Message
+	text := u.EffectiveMessage.Message.Message
 	parts := strings.Split(text, " ")
 	if len(parts) < 2 {
 		ctx.Reply(u, "⚠️ **Usage:** `/m3u8 <quality>:<link> <quality>:<link> ...`\n\n**Example:**\n`/m3u8 1080p:http://host/stream/... 720p:http://host/stream/...`", nil)
