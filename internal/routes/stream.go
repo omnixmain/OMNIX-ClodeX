@@ -186,7 +186,7 @@ func masterPlaylistRoute(ctx *gin.Context) {
 			}
 			absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
 			
-			m3u8.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:%s\n%s\n", streamInfo, absoluteURL))
+			m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(key), absoluteURL))
 		}
 	}
 
