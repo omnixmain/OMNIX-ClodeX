@@ -145,7 +145,6 @@ func getStreamRoute(ctx *gin.Context) {
 }
 
 func masterPlaylistRoute(ctx *gin.Context) {
-	w := ctx.Writer
 	r := ctx.Request
 
 	// Generate M3U8 master playlist from query parameters
