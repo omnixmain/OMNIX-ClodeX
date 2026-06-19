@@ -31,6 +31,7 @@ func (e *allRoutes) LoadHome(r *Route) {
 	r.Engine.GET("/view/:messageID", getStreamRoute)
 	r.Engine.GET("/view/:messageID/:hash", getStreamRoute)
 	r.Engine.GET("/view/:messageID/:hash/:filename", getStreamRoute)
+	r.Engine.GET("/hls/:messageID/:hash/index.m3u8", hlsMediaPlaylistRoute)
 	r.Engine.GET("/master.m3u8", masterPlaylistRoute)
 	r.Engine.GET("/master/:filename", masterPlaylistRoute)
 	r.Engine.GET("/master/:filename/:data", masterPlaylistRoute)
@@ -146,6 +147,31 @@ func getStreamRoute(ctx *gin.Context) {
 	}
 }
 
+func hlsMediaPlaylistRoute(ctx *gin.Context) {
+	messageID := ctx.Param("messageID")
+	hash := ctx.Param("hash")
+
+	scheme := "http"
+	if ctx.Request.TLS != nil || ctx.Request.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	
+	streamURL := fmt.Sprintf("%s://%s/stream/%s/%s/video.mp4", scheme, ctx.Request.Host, messageID, hash)
+
+	var m3u8 strings.Builder
+	m3u8.WriteString("#EXTM3U\n")
+	m3u8.WriteString("#EXT-X-VERSION:3\n")
+	m3u8.WriteString("#EXT-X-TARGETDURATION:10000\n")
+	m3u8.WriteString("#EXT-X-PLAYLIST-TYPE:VOD\n")
+	m3u8.WriteString("#EXTINF:10000.0,\n")
+	m3u8.WriteString(streamURL + "\n")
+	m3u8.WriteString("#EXT-X-ENDLIST\n")
+
+	ctx.Header("Content-Type", "application/vnd.apple.mpegurl")
+	ctx.Header("Content-Disposition", "inline; filename=\"index.m3u8\"")
+	ctx.String(http.StatusOK, m3u8.String())
+}
+
 func masterPlaylistRoute(ctx *gin.Context) {
 	r := ctx.Request
 
@@ -161,6 +187,14 @@ func masterPlaylistRoute(ctx *gin.Context) {
 		scheme = "https"
 	}
 
+	qualityMap := map[string]string{
+		"2160p": "BANDWIDTH=15000000,RESOLUTION=3840x2160",
+		"1080p": "BANDWIDTH=5000000,RESOLUTION=1920x1080",
+		"720p":  "BANDWIDTH=3000000,RESOLUTION=1280x720",
+		"480p":  "BANDWIDTH=1500000,RESOLUTION=854x480",
+		"360p":  "BANDWIDTH=800000,RESOLUTION=640x360",
+	}
+
 	dataParam := ctx.Param("data")
 	if dataParam != "" {
 		dataParam = strings.TrimSuffix(dataParam, ".m3u8")
@@ -172,9 +206,18 @@ func masterPlaylistRoute(ctx *gin.Context) {
 				if len(kv) == 2 {
 					quality := kv[0]
 					path := kv[1]
-					escapedPath := strings.ReplaceAll(path, " ", "%20")
-					absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
-					m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(quality), absoluteURL))
+					
+					pathParts := strings.Split(path, "/")
+					if len(pathParts) >= 4 && pathParts[1] == "stream" {
+						hlsPath := fmt.Sprintf("/hls/%s/%s/index.m3u8", pathParts[2], pathParts[3])
+						absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, hlsPath)
+						
+						streamInfo, ok := qualityMap[strings.ToLower(quality)]
+						if !ok {
+							streamInfo = "BANDWIDTH=1500000"
+						}
+						m3u8.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:%s\n%s\n", streamInfo, absoluteURL))
+					}
 				}
 			}
 		}
@@ -187,9 +230,17 @@ func masterPlaylistRoute(ctx *gin.Context) {
 			decodedPathBytes, err := base64.RawURLEncoding.DecodeString(values[0])
 			if err == nil {
 				path := string(decodedPathBytes)
-				escapedPath := strings.ReplaceAll(path, " ", "%20")
-				absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, escapedPath)
-				m3u8.WriteString(fmt.Sprintf("#EXTINF:-1,%s\n%s\n", strings.ToUpper(key), absoluteURL))
+				pathParts := strings.Split(path, "/")
+				if len(pathParts) >= 4 && pathParts[1] == "stream" {
+					hlsPath := fmt.Sprintf("/hls/%s/%s/index.m3u8", pathParts[2], pathParts[3])
+					absoluteURL := fmt.Sprintf("%s://%s%s", scheme, r.Host, hlsPath)
+					
+					streamInfo, ok := qualityMap[strings.ToLower(key)]
+					if !ok {
+						streamInfo = "BANDWIDTH=1500000"
+					}
+					m3u8.WriteString(fmt.Sprintf("#EXT-X-STREAM-INF:%s\n%s\n", streamInfo, absoluteURL))
+				}
 			}
 		}
 	}
