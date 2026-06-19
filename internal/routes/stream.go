@@ -154,23 +154,9 @@ func masterPlaylistRoute(ctx *gin.Context) {
 	var m3u8 strings.Builder
 	m3u8.WriteString("#EXTM3U\n")
 
-	qualityMap := map[string]string{
-		"2160p": "BANDWIDTH=15000000,RESOLUTION=3840x2160",
-		"1080p": "BANDWIDTH=5000000,RESOLUTION=1920x1080",
-		"720p":  "BANDWIDTH=3000000,RESOLUTION=1280x720",
-		"480p":  "BANDWIDTH=1500000,RESOLUTION=854x480",
-		"360p":  "BANDWIDTH=800000,RESOLUTION=640x360",
-	}
-
 	for key, values := range query {
 		if len(values) == 0 {
 			continue
-		}
-		
-		quality := strings.ToLower(key)
-		streamInfo, ok := qualityMap[quality]
-		if !ok {
-			streamInfo = "BANDWIDTH=1500000" // Default for unknown
 		}
 
 		decodedPathBytes, err := base64.RawURLEncoding.DecodeString(values[0])
