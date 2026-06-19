@@ -1,9 +1,12 @@
 package commands
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
+	"time"
 
 	"EverythingSuckz/fsb/config"
 	"EverythingSuckz/fsb/internal/utils"
@@ -40,6 +43,9 @@ func supportedMediaFilter(m *types.Message) (bool, error) {
 		return false, nil
 	}
 }
+
+var albumMu sync.Mutex
+var albumLinks = make(map[int64]map[string]string)
 
 func sendLink(ctx *ext.Context, u *ext.Update) error {
 	chatId := u.EffectiveChat().GetID()
@@ -163,5 +169,64 @@ func sendLink(ctx *ext.Context, u *ext.Update) error {
 		utils.Logger.Sugar().Error(err)
 		ctx.Reply(u, fmt.Sprintf("Error - %s", err.Error()), nil)
 	}
+
+	groupedID := u.EffectiveMessage.GroupedID
+	if groupedID != 0 && linkType == "stream" {
+		albumMu.Lock()
+		isFirst := false
+		if _, ok := albumLinks[groupedID]; !ok {
+			albumLinks[groupedID] = make(map[string]string)
+			isFirst = true
+		}
+		parsedUrl, _ := url.Parse(link)
+		albumLinks[groupedID][strings.ToLower(quality)] = parsedUrl.Path
+		albumMu.Unlock()
+
+		if isFirst {
+			go func(gid int64, context *ext.Context, update *ext.Update) {
+				// Wait for all parts of the album to arrive (10 seconds should be plenty)
+				time.Sleep(10 * time.Second)
+				albumMu.Lock()
+				links := albumLinks[gid]
+				delete(albumLinks, gid)
+				albumMu.Unlock()
+
+				if len(links) > 1 {
+					var qs []string
+					for q, l := range links {
+						b64Path := base64.RawURLEncoding.EncodeToString([]byte(l))
+						qs = append(qs, fmt.Sprintf("%s=%s", q, b64Path))
+					}
+					masterLink := fmt.Sprintf("%s/master.m3u8?%s", config.ValueOf.Host, strings.Join(qs, "&"))
+					
+					masterText := []styling.StyledTextOption{
+						styling.Plain("✅ "), styling.Bold("Auto-Generated Master M3U8 Playlist!"),
+						styling.Plain("\n\nThis single link combines all "), styling.Bold(fmt.Sprintf("%d", len(links))), styling.Plain(" qualities of your upload for adaptive streaming.\n\n🔗 "), styling.Code(masterLink),
+						styling.Plain("\n\n⚡ "), styling.Bold("Powered by OMNIX ClodeX"),
+					}
+					
+					masterMarkup := &tg.ReplyInlineMarkup{
+						Rows: []tg.KeyboardButtonRow{
+							{
+								Buttons: []tg.KeyboardButtonClass{
+									&tg.KeyboardButtonURL{
+										Text: "▶️ Play M3U8",
+										URL:  masterLink,
+									},
+								},
+							},
+						},
+					}
+
+					context.Reply(update, masterText, &ext.ReplyOpts{
+						Markup:           masterMarkup,
+						ReplyToMessageId: update.EffectiveMessage.ID,
+						NoWebpage:        true,
+					})
+				}
+			}(groupedID, ctx, u)
+		}
+	}
+
 	return dispatcher.EndGroups
 }
